@@ -243,7 +243,8 @@ sub SPI_MAX31865_ReadData(@) {
 	
 	Log3 $hash->{NAME}, 5, $hash->{NAME}." => Reistance: $resistance , Temperature: $temp";
 	my $temperature = sprintf( '%.' . AttrVal($hash->{NAME}, 'decimals', 1) . 'f', $temp 	); 
-	readingsSingleUpdate($hash, 'temperature', $temperature,1);
+	readingsSingleUpdate($hash, 'temperature', $temperature,1) if (ReadingsVal($hash->{NAME},"temperature",0) != $temperature);
+	readingsSingleUpdate($hash, 'state', "Ok",0);
 	close($handler);
 }
 
@@ -275,7 +276,7 @@ sub SPI_MAX31865_Attr(@) {					#
   }
 
   #check for correct values while setting so we need no error handling later
-  foreach ('device','PT', 'correction', 'SPI_frequency') {
+  foreach ('correction', 'SPI_frequency') {
 	if ($attr eq $_) {
 		if ( defined($val) ) {
 			if ( !looks_like_number($val) || $val <= 0) {
