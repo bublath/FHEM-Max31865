@@ -85,6 +85,7 @@ sub SPI_MAX31865_Initialize($) {
   $hash->{SetFn}     = 	"SPI_MAX31865_Set";
   $hash->{StateFn}   =  "SPI_MAX31865_State";
   $hash->{GetFn}     = 	"SPI_MAX31865_Get";
+  $hash->{GetFn}     = 	"SPI_MAX31865_Get";
   $hash->{UndefFn}   = 	"SPI_MAX31865_Undef";
   $hash->{AttrList}  = 	"IODev do_not_notify:1,0 ignore:1,0 showtime:1,0 ".
 												"device:0,1 ".
@@ -105,9 +106,9 @@ sub SPI_MAX31865_Set($@) {					#
  
 	if ( $cmd && $cmd eq "Update") {
 		#Make sure there is no reading cycle running and re-start polling (which starts with an inital read)
-		RemoveInternalTimer($hash) if ( defined (AttrVal($hash->{NAME}, "poll_interval", undef)) ); 
+		RemoveInternalTimer($hash);
 		$hash->{helper}{state}=0; #Reset state machine
-		InternalTimer(gettimeofday() + 0.01, 'SPI_MAX31865_Execute', $hash, 0);
+		InternalTimer(gettimeofday() + 1, 'SPI_MAX31865_Execute', $hash, 0);
 		return undef;
 	} else {
 		my $list = "Update:noArg";
@@ -137,7 +138,7 @@ sub SPI_MAX31865_Execute($@) {
 		SPI_MAX31865_InitConfig($hash);
 		$hash->{helper}{state}=1;
 	} elsif ($state==1) {
-		$nexttimer = AttrVal($hash->{NAME}, 'poll_interval', 5)*60; 
+		$nexttimer = AttrVal($hash->{NAME}, 'poll_interval', 0)*60; 
 		SPI_MAX31865_ReadData($hash);
 		$hash->{helper}{state}=0;
 	} 
@@ -266,7 +267,7 @@ sub SPI_MAX31865_Attr(@) {					#
     if ( defined($val) ) {
       if ( looks_like_number($val) && $val >= 0) {
         RemoveInternalTimer($hash);
-        InternalTimer(1, 'SPI_MAX31865_Execute', $hash, 0) if $val>0;
+        InternalTimer(gettimeofday()+1, 'SPI_MAX31865_Execute', $hash, 0) if $val>0;
       } else {
         $msg = "$hash->{NAME}: Wrong poll intervall defined. poll_interval must be a number >= 0";
       }    
