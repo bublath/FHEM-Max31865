@@ -85,7 +85,6 @@ sub SPI_MAX31865_Initialize($) {
   $hash->{SetFn}     = 	"SPI_MAX31865_Set";
   $hash->{StateFn}   =  "SPI_MAX31865_State";
   $hash->{GetFn}     = 	"SPI_MAX31865_Get";
-  $hash->{GetFn}     = 	"SPI_MAX31865_Get";
   $hash->{UndefFn}   = 	"SPI_MAX31865_Undef";
   $hash->{AttrList}  = 	"IODev do_not_notify:1,0 ignore:1,0 showtime:1,0 ".
 												"device:0,1 ".
@@ -135,8 +134,13 @@ sub SPI_MAX31865_Execute($@) {
 	my $nexttimer=0.080; #80ms to give enough time for Bias to fire up and run one 1Shot conversion
 	$state=0 unless defined($state);
 	if ($state==0) {
-		SPI_MAX31865_InitConfig($hash);
-		$hash->{helper}{state}=1;
+		if ($init_done) {
+			SPI_MAX31865_InitConfig($hash);
+			$hash->{helper}{state}=1;
+		} else {
+			#If this was already called before FHEM is ready, just wait another second and try again
+			$nexttimer=1;
+		}
 	} elsif ($state==1) {
 		$nexttimer = AttrVal($hash->{NAME}, 'poll_interval', 0)*60; 
 		SPI_MAX31865_ReadData($hash);
@@ -196,7 +200,7 @@ sub SPI_MAX31865_InitConfig(@) {
 		|$SPI_MAX31865_Config{MAX_FLAGS}{CONFIG_BIAS}
 		|$SPI_MAX31865_Config{MAX_FLAGS}{CONFIG_FAULTSTAT}
 		|$SPI_MAX31865_Config{MAX_FLAGS}{CONFIG_FILT50HZ}
-		|$SPI_MAX31865_Config{MAX_FLAGS}{MAX31865_CONFIG_24WIRE};
+		|$SPI_MAX31865_Config{MAX_FLAGS}{CONFIG_24WIRE};
 
 	#Set Basic Config, Bias & 1Shot
 	$data = pack("CC",($SPI_MAX31865_Config{MAX_FLAGS}{CONFIG_REG} | 0x80),$config); #0x80 is write mode
