@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use SetExtensions;
 use Scalar::Util qw(looks_like_number);
+use List::Util qw(sum);
 
 my %SPI_MAX31865_Config =
 (
@@ -94,6 +95,7 @@ sub SPI_MAX31865_Initialize($) {
 												"decimals:0,1,2,3,4,5 ".
 												"mode:1SHOT ".
 												"poll_interval ".
+												"average ".
 												"$readingFnAttributes";
 }
 ################################### Todo: Set or Attribute for Mode? Other sets needed?
@@ -247,6 +249,15 @@ sub SPI_MAX31865_ReadData(@) {
 	} else {$temp=0;}
 	
 	Log3 $hash->{NAME}, 5, $hash->{NAME}." => Reistance: $resistance , Temperature: $temp";
+	my @avg=();
+	my $avgs=$hash->{helper}{lastvals};
+	@avg=@$avgs if (defined $avgs);
+	my $avgmax=AttrVal($hash->{NAME},"average",1);
+	$avgmax=1 if $avgmax<1;
+	push @avg,$temp;
+	while (@avg>$avgmax) { shift @avg; }
+	$hash->{helper}{lastvals}=[@avg];
+	$temp=sum(@avg)/@avg;
 	my $temperature = sprintf( '%.' . AttrVal($hash->{NAME}, 'decimals', 1) . 'f', $temp 	); 
 	readingsSingleUpdate($hash, 'temperature', $temperature,1) if (ReadingsVal($hash->{NAME},"temperature",0) != $temperature);
 	readingsSingleUpdate($hash, 'state', "Ok",0);
@@ -416,6 +427,10 @@ sub SPI_MAX31865_Undef($$) {				#
 		<li>decimals<br>
 			Number of decimals (after the decimal point) for the temperature.<br>
 			Default: 1, valid values: 0,1,2,3,4,5<br>
+		</li>
+		<li>average<br>
+			Size of floating average to smoothen outliers.<br>
+			Default: 0, valid values: positive intergers<br>
 		</li>
 		<br>
 		<li>spi_frequency<br>
